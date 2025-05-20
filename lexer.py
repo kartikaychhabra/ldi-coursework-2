@@ -20,10 +20,9 @@ class Lexer:
                 self.token = self.extract_number()
 
             elif self.char in Lexer.operations:
-
                 self.token = Operation(self.char)
                 self.move()
-            
+
             elif self.char in Lexer.stopwords:
                 self.move()
                 continue
@@ -34,15 +33,15 @@ class Lexer:
 
     
     def extract_number(self):
-
         isFloat = False
         number = ""
-        while (self.char in Lexer.digits or self.char == ".") and (self.index < len(self.text)):
-            if  self.char == ".":
-                isFloat = True 
-            number += self.char 
+
+        while self.index < len(self.text) and (self.char in Lexer.digits or self.char == "."):
+            if self.char == ".":
+                isFloat = True
+            number += self.char
             self.move()
-        
+
         return Integer(number) if not isFloat else Float(number)
 
     def move(self):

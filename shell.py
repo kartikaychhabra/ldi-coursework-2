@@ -10,7 +10,7 @@ while True:
     tokens = tokenizer.tokenize()
 
     parser = Parser(tokens)
-    tree = parser.parse()
+    tree = parser.parse()    
 
     interpreter = Interpreter(tree)
     result = interpreter.interpret()
