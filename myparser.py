@@ -4,35 +4,38 @@ class Parser:
         self.tokens = tokens 
         self.index = 0 
         self.token = self.tokens[self.index]
+    
 
     def factor(self):
         if self.token.type == "int" or self.token.type == "flt":
             return self.token
-    
+        elif self.token.val == "(":
+            self.move()
+            expression = self.expression()
+            return expression
+
     def term(self):
         left_node = self.factor()
         self.move()
-        output = left_node 
         
-        if self.token.val == "*" or self.token.val == "/":
+        while self.token.val == "*" or self.token.val == "/":
 
             operation = self.token 
             self.move()
             right_node = self.factor()
             self.move()
-            output = [left_node, operation, right_node] 
+            left_node = [left_node, operation, right_node] 
 
-        return output 
+        return left_node 
 
     def expression(self):
         left_node = self.term()
-        output = left_node 
-        if self.token.val == "+" or self.token.val == "-":
+        while self.token.val == "+" or self.token.val == "-":
             operation = self.token 
             self.move()
             right_node = self.term()
-            output = [left_node, operation, right_node] 
-        return output 
+            left_node = [left_node, operation, right_node] 
+        return left_node  
 
     def parse(self):
         return self.expression()

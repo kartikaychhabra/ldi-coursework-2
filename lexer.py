@@ -1,7 +1,9 @@
+from tokens import Token, Integer, Operation, Float
+
 class Lexer:
 
     digits = "0123456789"
-    operations = "+-*/"
+    operations = "+-*/()"
     stopwords = [" "]
 
     def __init__(self, text):
@@ -49,32 +51,6 @@ class Lexer:
         if self.index < len(self.text):
             self.char = self.text[self.index]
 
-    
-class Token:
-
-    def __init__(self, type, val):
-
-        self.type = type 
-        self.val = val 
-
-    def __repr__(self):
-        
-        return self.val 
-    
-class Integer(Token):
-    
-    def __init__(self, val):
-        super().__init__("int", val)
-
-class Float(Token):
-
-    def __init__(self, val):
-        super().__init__("flt", val)
-
-class Operation(Token):
-
-    def __init__(self, val):
-        super().__init__("op", val)
 
 
         
