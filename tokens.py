@@ -33,3 +33,8 @@ class Boolean(Token):
 class BooleanValue(Token):
     def __init__(self, val):
         super().__init__("bool_val", val)
+
+class String(Token):
+    def __init__(self, val):
+        super().__init__("str", val)
+

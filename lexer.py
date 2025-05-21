@@ -1,12 +1,13 @@
-from tokens import Token, Integer, Operation, Float, Declaration, Variable, Boolean, BooleanValue
+from tokens import Token, Integer, Operation, Float, Declaration, Variable, Boolean, BooleanValue, String
+import string
 
 class Lexer:
 
     digits = "0123456789"
-    operations = "+-*/()=<>!"
+    operations = "+-*/()=<>!;"
     stopwords = [" "]
-    letters = "abcdefghijklmnopqrstuvwxyz"
-    declarations = ["let"]
+    letters =  string.ascii_letters + "_"
+    declarations = ["let", "print"]
     boolean_ops = ["and", "or", "not"]
     boolean_vals = ["true", "false"]
 
@@ -48,6 +49,9 @@ class Lexer:
                 self.move()
                 continue
 
+            elif self.char == '"':
+                self.token = self.extract_string()
+
             elif self.char in Lexer.letters:
                 word = self.extract_word()
                 
@@ -67,8 +71,36 @@ class Lexer:
 
         return self.tokens
     
+    def extract_string(self):
+        string_val = ""
+        self.move()  # skip opening quote
+
+        while self.char != '"' and self.index < len(self.text):
+            if self.char == '\\':  # escape sequence start
+                self.move()
+                if self.char == 'n':
+                    string_val += '\n'
+                elif self.char == 't':
+                    string_val += '\t'
+                elif self.char == '"':
+                    string_val += '"'
+                else:
+                    raise Exception(f"Unknown escape sequence \\{self.char}")
+                self.move()
+            else:
+                string_val += self.char
+                self.move()
+
+        if self.char != '"':
+            raise Exception("Unterminated string literal")
+
+        self.move()  # skip closing quote
+
+        return String(string_val)
+
+    
     def peek(self):
-        """Look at the next character without moving"""
+        # Look at the next character without moving
         peek_index = self.index + 1
         if peek_index < len(self.text):
             return self.text[peek_index]

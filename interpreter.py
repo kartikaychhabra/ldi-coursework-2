@@ -1,4 +1,4 @@
-from tokens import Integer, Float, BooleanValue
+from tokens import Integer, Float, BooleanValue, String
 
 class Interpreter:
 
@@ -37,6 +37,8 @@ class Interpreter:
                     return False
                 else:
                     raise Exception(f"Invalid boolean literal: {val}")
+            if typ == "str":
+                return str(val)
 
             elif typ.startswith("var"):
                 # Variable lookup from data store
@@ -68,6 +70,8 @@ class Interpreter:
             return Integer(str(value))
         elif isinstance(value, float):
             return Float(str(value))
+        elif isinstance(value, str):
+            return String(value)
         else:
             raise Exception(f"Cannot convert result of type {type(value)} to token")
 
@@ -89,11 +93,22 @@ class Interpreter:
 
         result = None
         if op == "+":
-            result = left_val + right_val
+            # Prevent mixing strings with numbers
+            if isinstance(left_val, str) and isinstance(right_val, str):
+                result = left_val + right_val
+            elif isinstance(left_val, (int, float)) and isinstance(right_val, (int, float)):
+                result = left_val + right_val
+            else:
+                raise Exception(f"Type error: Cannot add {type(left_val).__name__} and {type(right_val).__name__}")
+
         elif op == "-":
             result = left_val - right_val
         elif op == "*":
-            result = left_val * right_val
+            if isinstance(left_val, (int, float)) and isinstance(right_val, (int, float)):
+                result = left_val * right_val
+            else:
+                raise Exception(f"Type error: Cannot multiply {type(left_val).__name__} with {type(right_val).__name__}")
+
         elif op == "/":
             result = left_val / right_val
         elif op == "==":
@@ -138,6 +153,15 @@ class Interpreter:
             raise Exception(f"Unknown unary operator: {op}")
 
     def evaluate(self, expr):
+
+        # Handle print statements: ["print", expr]
+        if isinstance(expr, list) and len(expr) == 2 and expr[0] == "print":
+            to_print = self.evaluate(expr[1])
+            val = self.get_value(to_print)
+            print(val)  # Directly print here
+            return None  # so shell knows not to print again
+
+
         # expr can be token, native value, or list (subtree)
 
         # If expr is not a list, just return as token or convert native python to token

@@ -49,6 +49,12 @@ class Parser:
             self.move()
             return node
 
+        # String literal
+        if self.token and self.token.type == "str":
+            node = self.token
+            self.move()
+            return node
+
         # Variable reference
         if self.token and self.token.type.startswith("var"):
             node = self.token
@@ -113,29 +119,83 @@ class Parser:
             self.move()
             return var
         raise Exception(f"Expected variable, got {self.token}")
+    
+    def print_statement(self):
+        
+        self.move()  # consume 'print'
+        expr = self.expression()
+        return ["print", expr]
+
 
     def statement(self):
         if not self.token:
             raise Exception("No tokens to parse")
-            
-        if self.token.type == "decl":
-             # Variable Assignment
-             self.move()
-             left_node = self.variable()
-             if self.token and self.token.val == "=":
-                operation = self.token 
+
+        # Handle 'let' declaration
+        if self.token.type == "decl" and self.token.val == "let":
+            self.move()
+            left_node = self.variable()
+
+            if self.token and self.token.val == "=":
+                operation = self.token
                 self.move()
+
+                if self.token and self.token.val == "=":
+                    raise Exception("Chained assignments like 'a = b = 5' are not supported.")
+
                 right_node = self.expression()
                 return [left_node, operation, right_node]
-             else:
+            else:
                 raise Exception("Expected '=' after variable in declaration")
-             
-        # All other expressions (arithmetic, boolean, etc.)
-        else:
-            return self.expression()
+
+        # Handle print statement
+        if self.token.val == "print":
+            return self.print_statement()
+
+        if self.token.type == "decl" and self.token.val == "print":
+            self.move()
+            expr = self.expression()
+            return ["print", expr]
+
+        # Handle assignment or fallback to expression
+        if self.token.type.startswith("var"):
+            start_index = self.index
+            left_node = self.token
+            self.move()
+
+            if self.token and self.token.val == "=":
+                operation = self.token
+                self.move()
+
+                if self.token and self.token.val == "=":
+                    raise Exception("Chained assignments like 'a = b = 5' are not supported.")
+
+                right_node = self.expression()
+                return [left_node, operation, right_node]
+            else:
+                # Not an assignment; backtrack and parse as expression
+                self.index = start_index
+                self.token = self.tokens[self.index]
+                return self.expression()
+
+        # Default: just an expression
+        return self.expression()
+
+
+            
+    def parse_statements(self):
+        statements = []
+        while self.token is not None:
+            stmt = self.statement()
+            statements.append(stmt)
+            if self.token and self.token.val == ";":
+                self.move()  # consume semicolon
+            else:
+                break
+        return statements
 
     def parse(self):
-        result = self.statement()
+        result = self.parse_statements()
         # Check if there are any tokens left that weren't processed
         if self.token is not None:
             raise Exception(f"Unexpected token at end: {self.token}")
