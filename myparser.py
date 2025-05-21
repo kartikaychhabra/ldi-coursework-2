@@ -25,6 +25,12 @@ class Parser:
             node = self.token
             self.move()
             return node
+        
+        # Variable reference
+        elif self.token and self.token.type.startswith("var"):
+            node = self.token
+            self.move()
+            return node
 
         # Parentheses
         elif self.token and self.token.val == "(":
@@ -35,7 +41,7 @@ class Parser:
             return expr
 
         # Unexpected token
-        raise Exception("Unexpected token in factor")
+        raise Exception(f"Unexpected token in factor: {self.token}")
 
     def term(self):
         left_node = self.factor()
@@ -56,6 +62,32 @@ class Parser:
             right_node = self.term()
             left_node = [left_node, operation, right_node]
         return left_node  
+    
+    def variable(self):
+        if self.token.type.startswith("var"):
+            var = self.token
+            self.move()
+            return var
+        raise Exception(f"Expected variable, got {self.token}")
+
+    def statement(self):
+        if self.token.type == "decl":
+             # Variable Assignment
+             self.move()
+             left_node = self.variable()
+             if self.token and self.token.val == "=":
+                operation = self.token 
+                self.move()
+                right_node = self.expression()
+                return [left_node, operation, right_node]
+             else:
+                raise Exception("Expected '=' after variable in declaration")
+             
+        elif self.token.type == "int" or self.token.type == "flt" or self.token.type.startswith("var") or self.token.val == "(" or self.token.val == "-":
+            # Arithmetic Expression
+            return self.expression()
+        else:
+            raise Exception(f"Unexpected token at start of statement: {self.token}")
 
     def parse(self):
-        return self.expression()
+        return self.statement()

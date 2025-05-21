@@ -23,3 +23,13 @@ class Operation(Token):
 
     def __init__(self, val):
         super().__init__("op", val)
+
+class Declaration(Token):
+
+    def __init__(self, val):
+        super().__init__("decl", val)
+
+class Variable(Token):
+
+    def __init__(self, val):
+        super().__init__("var(?)", val)

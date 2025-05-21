@@ -2,8 +2,9 @@ from tokens import Integer, Float
 
 class Interpreter: 
 
-    def __init__(self, tree):
+    def __init__(self, tree, base):
         self.tree = tree
+        self.data = base 
 
     def read_int(self, val):
         return int(val)
@@ -11,63 +12,135 @@ class Interpreter:
     def read_flt(self, val):
         return float(val)
     
+    def get_value(self, token):
+        """Get the actual value of a token, resolving variables"""
+        if token.type == "int":
+            return int(token.val)
+        elif token.type == "flt":
+            return float(token.val)
+        elif token.type.startswith("var"):
+            # Resolve variable reference
+            var_name = token.val
+            try:
+                value = self.data.read(var_name)
+                # If stored as raw value, return it
+                if isinstance(value, (int, float)):
+                    return value
+                # If stored as token, get its value
+                elif hasattr(value, 'type'):
+                    return self.get_value(value)
+                return value
+            except KeyError:
+                raise Exception(f"Undefined variable: {var_name}")
+        else:
+            raise Exception(f"Cannot get value of token type: {token.type}")
+
     def compute_binary(self, left, op, right):
-        # Wrap if needed
-        left = self.wrap_token(left)
-        right = self.wrap_token(right)
-
-        left_val = getattr(self, f"read_{left.type}")(left.val)
-        right_val = getattr(self, f"read_{right.type}")(right.val)
-
+        if op.val == "=":
+            # Evaluate right side fully
+            if isinstance(right, list):
+                right_val = self.interpret(right)
+            else:
+                right_val = right
+                
+            # Store the value (either token or raw value)
+            if hasattr(right_val, "type"):
+                if right_val.type == "int":
+                    self.data.write(left.val, int(right_val.val))
+                elif right_val.type == "flt":
+                    self.data.write(left.val, float(right_val.val)) 
+                elif right_val.type.startswith("var"):
+                    # If right side is variable, store its value
+                    var_value = self.get_value(right_val)
+                    self.data.write(left.val, var_value)
+                else:
+                    self.data.write(left.val, right_val)
+            else:
+                # Raw value
+                self.data.write(left.val, right_val)
+            
+            return self.data.read_all()
+        
+        # For arithmetic operations
+        left_val = None
+        right_val = None
+        
+        # Get the actual values of operands
+        if isinstance(left, list):
+            # If left is an expression, evaluate it
+            left_result = self.interpret(left)
+            if hasattr(left_result, "type"):
+                left_val = self.get_value(left_result)
+            else:
+                left_val = left_result
+        else:
+            # Direct token
+            left_val = self.get_value(left)
+            
+        if isinstance(right, list):
+            # If right is an expression, evaluate it
+            right_result = self.interpret(right)
+            if hasattr(right_result, "type"):
+                right_val = self.get_value(right_result)
+            else:
+                right_val = right_result
+        else:
+            # Direct token
+            right_val = self.get_value(right)
+            
+        # Calculate result
         if op.val == "+":
-            output = left_val + right_val
+            result = left_val + right_val
         elif op.val == "-":
-            output = left_val - right_val
+            result = left_val - right_val
         elif op.val == "*":
-            output = left_val * right_val
+            result = left_val * right_val
         elif op.val == "/":
-            output = left_val / right_val
+            result = left_val / right_val
         else:
-            raise Exception(f"Unknown operator {op.val}")
-
-        if isinstance(output, float) and output.is_integer():
-            output = int(output)
-
-        return Integer(str(output)) if isinstance(output, int) else Float(str(output))
-
-    def wrap_token(self, val):
-        if hasattr(val, "type") and hasattr(val, "val"):
-            return val
-        # Wrap raw int or float in Token
-        if isinstance(val, int):
-            return Integer(str(val))
-        elif isinstance(val, float):
-            return Float(str(val))
+            raise Exception(f"Unknown operator: {op.val}")
+            
+        # Convert float results to int if they're whole numbers
+        if isinstance(result, float) and result.is_integer():
+            result = int(result)
+            
+        # Return as appropriate token
+        if isinstance(result, int):
+            return Integer(str(result))
+        elif isinstance(result, float):
+            return Float(str(result))
         else:
-            raise Exception(f"Cannot wrap value {val}")
+            raise Exception(f"Unexpected result type: {type(result)}")
 
     def interpret(self, tree=None):
         if tree is None:
             tree = self.tree
-
-        # Unary minus case: [op, node]
+            
+        # Handle unary minus
         if isinstance(tree, list) and len(tree) == 2 and tree[0].val == "-":
             node = tree[1]
             val = self.interpret(node) if isinstance(node, list) else node
-            val = self.wrap_token(val)
-            val_num = getattr(self, f"read_{val.type}")(val.val)
+            
+            if hasattr(val, "type"):
+                val_num = self.get_value(val)
+            else:
+                val_num = val
+                
             result = -val_num
+            
+            # Convert float to int if it's a whole number
             if isinstance(result, float) and result.is_integer():
                 result = int(result)
+                
             return Integer(str(result)) if isinstance(result, int) else Float(str(result))
-
-        # Leaf node token
+            
+        # Handle leaf node
         if not isinstance(tree, list):
             return tree
-
-        # Binary operation: [left, op, right]
-        left = self.interpret(tree[0]) if isinstance(tree[0], list) else tree[0]
-        right = self.interpret(tree[2]) if isinstance(tree[2], list) else tree[2]
+            
+        # Handle binary operations
+        left = tree[0]
         op = tree[1]
-
+        right = tree[2]
+        
         return self.compute_binary(left, op, right)

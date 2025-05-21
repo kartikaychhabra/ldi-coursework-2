@@ -2,6 +2,9 @@ from lexer import Lexer
 from myparser import Parser
 from interpreter import Interpreter
 
+from data import Data 
+
+base = Data()
 
 while True:
     text = input("KayLang: ")
@@ -12,7 +15,7 @@ while True:
     parser = Parser(tokens)
     tree = parser.parse()    
 
-    interpreter = Interpreter(tree)
+    interpreter = Interpreter(tree, base)
     result = interpreter.interpret()
 
     print(result)
