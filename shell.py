@@ -13,9 +13,13 @@ while True:
     tokens = tokenizer.tokenize()
 
     parser = Parser(tokens)
-    tree = parser.parse()    
+    tree = parser.parse()   
+
 
     interpreter = Interpreter(tree, base)
     result = interpreter.interpret()
 
-    print(result)
+    if hasattr(result, "val"):
+        print(result.val)
+    else:
+        print(result)
