@@ -37,4 +37,8 @@ class BooleanValue(Token):
 class String(Token):
     def __init__(self, val):
         super().__init__("str", val)
+        
+class Keyword(Token):
+    def __init__(self, val):
+        super().__init__("kw", val)
 

@@ -128,6 +128,15 @@ class Parser:
 
 
     def statement(self):
+
+        # Handle while loop
+        if self.token.type == "kw" and self.token.val == "while":
+            return self.parse_while_statement()
+
+        # Handle if-else statement
+        if self.token.type == "kw" and self.token.val == "if":
+            return self.parse_if_statement()
+
         if not self.token:
             raise Exception("No tokens to parse")
 
@@ -200,3 +209,61 @@ class Parser:
         if self.token is not None:
             raise Exception(f"Unexpected token at end: {self.token}")
         return result
+    
+    def parse_block(self):
+        if self.token and self.token.val == "{":
+            self.move()
+            statements = []
+            while self.token and self.token.val != "}":
+                stmt = self.statement()
+                statements.append(stmt)
+                if self.token and self.token.val == ";":
+                    self.move()
+            if self.token and self.token.val == "}":
+                self.move()
+                return statements
+            else:
+                raise Exception("Expected '}' at end of block")
+        else:
+            raise Exception("Expected '{' to start block")
+
+    def parse_if_statement(self):
+        self.move()  # consume 'if'
+
+        if self.token.val != "(":
+            raise Exception("Expected '(' after 'if'")
+        self.move()
+
+        condition = self.expression()
+
+        if self.token.val != ")":
+            raise Exception("Expected ')' after if condition")
+        self.move()
+
+        then_block = self.parse_block()
+
+        else_block = []
+        if self.token and self.token.val == "else":
+            self.move()
+            else_block = self.parse_block()
+
+        return ["if", condition, then_block, else_block]
+    
+    def parse_while_statement(self):
+        self.move()  # consume 'while'
+
+        if self.token.val != "(":
+            raise Exception("Expected '(' after 'while'")
+        self.move()
+
+        condition = self.expression()
+
+        if self.token.val != ")":
+            raise Exception("Expected ')' after while condition")
+        self.move()
+
+        body = self.parse_block()
+        return ["while", condition, body]
+    
+
+

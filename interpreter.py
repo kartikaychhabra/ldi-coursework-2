@@ -154,13 +154,44 @@ class Interpreter:
 
     def evaluate(self, expr):
 
-        # Handle print statements: ["print", expr]
+         # Handle print statements: ["print", expr]
         if isinstance(expr, list) and len(expr) == 2 and expr[0] == "print":
             to_print = self.evaluate(expr[1])
             val = self.get_value(to_print)
-            print(val)  # Directly print here
-            return None  # so shell knows not to print again
+            print(val)
+            return None
 
+        # Handle if statements: ['if', condition_expr, then_body_list, else_body_list?]
+        if isinstance(expr, list) and len(expr) >= 3 and expr[0] == 'if':
+            condition = expr[1]
+            then_branch = expr[2]
+            else_branch = expr[3] if len(expr) > 3 else None
+
+            cond_val = self.get_value(self.evaluate(condition))
+            if cond_val:
+                result = None
+                for stmt in then_branch:
+                    result = self.evaluate(stmt)
+                return result
+            elif else_branch is not None:
+                result = None
+                for stmt in else_branch:
+                    result = self.evaluate(stmt)
+                return result
+            return None
+
+        # Handle while statements: ['while', condition_expr, body_list]
+        if isinstance(expr, list) and len(expr) == 3 and expr[0] == 'while':
+            condition = expr[1]
+            body = expr[2]
+            result = None
+            while True:
+                cond_val = self.get_value(self.evaluate(condition))
+                if not cond_val:
+                    break
+                for stmt in body:
+                    result = self.evaluate(stmt)
+            return None  # while loops usually do not return a value
 
         # expr can be token, native value, or list (subtree)
 

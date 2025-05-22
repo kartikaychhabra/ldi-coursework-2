@@ -1,15 +1,18 @@
-from tokens import Token, Integer, Operation, Float, Declaration, Variable, Boolean, BooleanValue, String
+from tokens import Token, Integer, Operation, Float, Declaration, Variable, Boolean, BooleanValue, String, Keyword
 import string
 
 class Lexer:
 
     digits = "0123456789"
-    operations = "+-*/()=<>!;"
-    stopwords = [" "]
+    operations = "+-*/()=<>!;{}"
+    stopwords = [" ", "\n", "\t", "\r"]
+
     letters =  string.ascii_letters + "_"
     declarations = ["let", "print"]
     boolean_ops = ["and", "or", "not"]
     boolean_vals = ["true", "false"]
+    keywords = ["if", "else", "while", "input"]
+
 
     def __init__(self, text):
         self.text = text 
@@ -41,6 +44,9 @@ class Lexer:
                     self.token = Operation(">=")
                     self.move()
                     self.move()
+                elif self.char in "{}":
+                    self.token = Token("brace", self.char)
+                    self.move()
                 else:
                     self.token = Operation(self.char)
                     self.move()
@@ -61,6 +67,9 @@ class Lexer:
                     self.token = Boolean(word)
                 elif word in Lexer.boolean_vals:
                     self.token = BooleanValue(word)
+                elif word in Lexer.keywords:
+                     self.token = Keyword(word)
+
                 else:
                     self.token = Variable(word)
 
