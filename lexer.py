@@ -4,7 +4,7 @@ import string
 class Lexer:
 
     digits = "0123456789"
-    operations = "+-*/()=<>!;{}"
+    operations = "+-*/()=<>!;{}[],."
     stopwords = [" ", "\n", "\t", "\r"]
 
     letters =  string.ascii_letters + "_"
@@ -46,6 +46,15 @@ class Lexer:
                     self.move()
                 elif self.char in "{}":
                     self.token = Token("brace", self.char)
+                    self.move()
+                elif self.char == "[":
+                    self.token = Token("lbracket", self.char)
+                    self.move()
+                elif self.char == "]":
+                    self.token = Token("rbracket", self.char)
+                    self.move()
+                elif self.char == ",":
+                    self.token = Token("comma", self.char)
                     self.move()
                 else:
                     self.token = Operation(self.char)

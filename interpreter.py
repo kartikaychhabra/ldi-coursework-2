@@ -8,7 +8,7 @@ class Interpreter:
 
     def get_value(self, token):
         # If token is already a native Python value, return it directly
-        if isinstance(token, (int, float, bool)):
+        if isinstance(token, (int, float, bool, list)):
             return token
 
         # If token has .type and .val attributes (expected)
@@ -29,7 +29,7 @@ class Interpreter:
                 except ValueError:
                     raise Exception(f"Invalid float literal: {val}")
 
-            elif typ == "bool_val":
+            elif typ == "bool_val": 
                 val_lower = str(val).lower()
                 if val_lower == "true":
                     return True
@@ -72,6 +72,10 @@ class Interpreter:
             return Float(str(value))
         elif isinstance(value, str):
             return String(value)
+        elif isinstance(value, list):
+            # Convert each element back to tokens recursively
+            tokens = [self.convert_to_token(v) for v in value]
+            return ["list_literal", tokens]
         else:
             raise Exception(f"Cannot convert result of type {type(value)} to token")
 
@@ -192,6 +196,69 @@ class Interpreter:
                 for stmt in body:
                     result = self.evaluate(stmt)
             return None  # while loops usually do not return a value
+        
+        # Handle list literals: ['list_literal', [elements]]
+        if isinstance(expr, list) and len(expr) == 2 and expr[0] == "list_literal":
+            elements = expr[1]  # this is a list of element expressions/tokens
+            # Evaluate each element recursively
+            evaluated_elements = [self.get_value(self.evaluate(el)) for el in elements]
+            return evaluated_elements
+        
+                # Handle list indexing: ['index_access', list_expr, index_expr]
+        if isinstance(expr, list) and len(expr) == 3 and expr[0] == "index_access":
+            list_val = self.get_value(self.evaluate(expr[1]))
+            index_val = self.get_value(self.evaluate(expr[2]))
+
+            if not isinstance(list_val, list):
+                raise Exception(f"Type error: trying to index non-list type {type(list_val).__name__}")
+
+            if not isinstance(index_val, int):
+                raise Exception(f"Index must be integer, got {type(index_val).__name__}")
+
+            try:
+                return self.convert_to_token(list_val[index_val])
+            except IndexError:
+                raise Exception(f"Index {index_val} out of bounds")
+
+        # Handle method calls: ['method_call', list_expr, method_name_token, args_list]
+        if isinstance(expr, list) and len(expr) == 4 and expr[0] == "method_call":
+            list_val = self.get_value(self.evaluate(expr[1]))
+            method_name_token = expr[2]
+            args_exprs = expr[3]
+
+            if not isinstance(list_val, list):
+                raise Exception(f"Type error: trying to call method on non-list type {type(list_val).__name__}")
+
+            method_name = method_name_token.val
+
+            # Evaluate args
+            args = [self.get_value(self.evaluate(arg)) for arg in args_exprs]
+
+            if method_name == "push":
+                # push method adds element(s) to the end of the list
+                for arg in args:
+                    list_val.append(arg)
+                # Return None or updated list as you prefer
+                return self.convert_to_token(list_val)
+
+            elif method_name == "pop":
+                # pop method with optional index argument
+                if len(args) == 0:
+                    popped = list_val.pop()
+                elif len(args) == 1:
+                    idx = args[0]
+                    if not isinstance(idx, int):
+                        raise Exception(f"pop index must be integer, got {type(idx).__name__}")
+                    popped = list_val.pop(idx)
+                else:
+                    raise Exception("pop() takes at most one argument")
+
+                return self.convert_to_token(popped)
+
+            else:
+                raise Exception(f"Unknown method '{method_name}' for list")
+
+
 
         # expr can be token, native value, or list (subtree)
 

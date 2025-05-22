@@ -60,21 +60,25 @@ class Parser:
             node = self.token
             self.move()
             return node
+        
+        # List literal
+        if self.token and self.token.type == "lbracket":
+             return self.parse_list_literal()
 
         # Unexpected token
         raise Exception(f"Unexpected token in factor: {self.token}")
 
 
     def term(self):
-        left_node = self.factor()
         
+        left_node = self.postfix_expression()
         while self.token and (self.token.val == "*" or self.token.val == "/"):
             operation = self.token
             self.move()
-            right_node = self.factor()
+            right_node = self.postfix_expression()
             left_node = [left_node, operation, right_node]
-
         return left_node
+
 
     def arithmetic_expression(self):
         left_node = self.term()
@@ -265,5 +269,80 @@ class Parser:
         body = self.parse_block()
         return ["while", condition, body]
     
+    def parse_list_literal(self):
+        # Current token is '['
+        if self.token.type != "lbracket":
+            raise Exception("Expected '[' to start list literal")
+        self.move()  # consume '['
+
+        elements = []
+        while self.token and self.token.type != "rbracket":
+            element = self.expression()
+            elements.append(element)
+
+            if self.token and self.token.type == "comma":
+                self.move()  # consume comma and continue parsing elements
+            elif self.token and self.token.type == "rbracket":
+                break
+            else:
+                raise Exception("Expected ',' or ']' in list literal")
+
+        if self.token and self.token.type == "rbracket":
+            self.move()  # consume ']'
+            return ["list_literal", elements]
+        else:
+            raise Exception("Expected ']' at end of list literal")
+
+    
+    def postfix_expression(self):
+        # Start by parsing a factor (number, var, list literal, etc)
+        node = self.factor()
+
+        while True:
+            # Check for list indexing: [ expr ]
+            if self.token and self.token.type == "lbracket":
+                self.move()  # consume '['
+                index_expr = self.expression()
+                if not (self.token and self.token.type == "rbracket"):
+                    raise Exception("Expected ']' after index expression")
+                self.move()  # consume ']'
+                # Wrap node as index access
+                node = ["index_access", node, index_expr]
+
+            # Check for method call: .methodName(args)
+            elif self.token and self.token.val == ".":
+                self.move()  # consume '.'
+                if not (self.token and self.token.type.startswith("var")):
+                    raise Exception("Expected method name after '.'")
+                method_name = self.token
+                self.move()
+
+                if not (self.token and self.token.val == "("):
+                    raise Exception("Expected '(' after method name")
+                self.move()  # consume '('
+
+                args = []
+                if self.token and self.token.val != ")":
+                    while True:
+                        arg = self.expression()
+                        args.append(arg)
+                        if self.token and self.token.val == ",":
+                            self.move()  # consume ','
+                            continue
+                        else:
+                            break
+
+                if not (self.token and self.token.val == ")"):
+                    raise Exception("Expected ')' after method call arguments")
+                self.move()  # consume ')'
+
+                # Wrap node as method call
+                node = ["method_call", node, method_name, args]
+
+            else:
+                # No more postfix operators
+                break
+
+        return node
 
 
