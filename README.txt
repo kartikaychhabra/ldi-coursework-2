@@ -48,7 +48,7 @@ Supported Features
 
 Example File 
 
-The kaylang_example.kay file includes a complete program showcasing all features:
+The Example folder contains examples from stage 1 to stage 6 as follows:
 
 1. Arithmetic operations (e.g., 1 - 2, (10 * 2) / 6).
 
@@ -60,7 +60,7 @@ The kaylang_example.kay file includes a complete program showcasing all features
 
 5. Control flow (if and while loops).
 
-6. List and dictionary operations (e.g., lst.push(4), dict[c] = 3). Run it with: python3 shell.py kaylang_example.kay
+6. List and dictionary operations (e.g., lst.push(4), dict[c] = 3).
 
 Limitations 
 
