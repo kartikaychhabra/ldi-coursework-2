@@ -4,14 +4,14 @@ import string
 class Lexer:
 
     digits = "0123456789"
-    operations = "+-*/()=<>!;{}[],."
+    operations = "+-*/()=<>!;{}[],.:"
     stopwords = [" ", "\n", "\t", "\r"]
 
     letters =  string.ascii_letters + "_"
     declarations = ["let", "print"]
     boolean_ops = ["and", "or", "not"]
     boolean_vals = ["true", "false"]
-    keywords = ["if", "else", "while", "input"]
+    keywords = ["if", "else", "while", "input", "delete"]  # Added "delete" here
 
 
     def __init__(self, text):
@@ -56,6 +56,9 @@ class Lexer:
                 elif self.char == ",":
                     self.token = Token("comma", self.char)
                     self.move()
+                elif self.char == ":":
+                    self.token = Token("colon", self.char)
+                    self.move()
                 else:
                     self.token = Operation(self.char)
                     self.move()
@@ -64,12 +67,19 @@ class Lexer:
                 self.move()
                 continue
 
+            elif self.char == '#':
+                # ✅ Skip comments
+                while self.char != '\n' and self.index < len(self.text):
+                    self.move()
+                self.move()  # also skip the newline
+                continue
+
             elif self.char == '"':
                 self.token = self.extract_string()
 
             elif self.char in Lexer.letters:
                 word = self.extract_word()
-                
+
                 if word in Lexer.declarations:
                     self.token = Declaration(word)
                 elif word in Lexer.boolean_ops:
@@ -77,8 +87,7 @@ class Lexer:
                 elif word in Lexer.boolean_vals:
                     self.token = BooleanValue(word)
                 elif word in Lexer.keywords:
-                     self.token = Keyword(word)
-
+                    self.token = Keyword(word)
                 else:
                     self.token = Variable(word)
 
@@ -88,7 +97,7 @@ class Lexer:
             self.tokens.append(self.token)
 
         return self.tokens
-    
+
     def extract_string(self):
         string_val = ""
         self.move()  # skip opening quote

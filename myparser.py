@@ -64,13 +64,17 @@ class Parser:
         # List literal
         if self.token and self.token.type == "lbracket":
              return self.parse_list_literal()
+        
+        # Dictionary literal
+        if self.token and self.token.type == "brace" and self.token.val == "{":
+            return self.parse_dict_literal()
 
         # Unexpected token
         raise Exception(f"Unexpected token in factor: {self.token}")
 
 
     def term(self):
-        
+
         left_node = self.postfix_expression()
         while self.token and (self.token.val == "*" or self.token.val == "/"):
             operation = self.token
@@ -131,23 +135,39 @@ class Parser:
         return ["print", expr]
 
 
+    def is_valid_assignment_target(self, node):
+        # Valid targets: simple variable or index access
+        if isinstance(node, list) and len(node) == 3 and node[0] == "index_access":
+            return True
+        if hasattr(node, "type") and node.type.startswith("var"):
+            return True
+        return False
+
+
     def statement(self):
+        # Delete statement
+        if self.token and self.token.type == "kw" and self.token.val == "delete":
+            self.move()  # consume 'delete'
+            target = self.postfix_expression()
+            if not self.is_valid_assignment_target(target):
+                raise Exception("Can only delete a variable or dictionary/list index")
+            return ["delete", target]
 
-        # Handle while loop
-        if self.token.type == "kw" and self.token.val == "while":
-            return self.parse_while_statement()
-
-        # Handle if-else statement
-        if self.token.type == "kw" and self.token.val == "if":
+        # If statement
+        if self.token and self.token.type == "kw" and self.token.val == "if":
             return self.parse_if_statement()
 
-        if not self.token:
-            raise Exception("No tokens to parse")
+        # While statement
+        if self.token and self.token.type == "kw" and self.token.val == "while":
+            return self.parse_while_statement()
 
-        # Handle 'let' declaration
-        if self.token.type == "decl" and self.token.val == "let":
+        # Let declaration
+        if self.token and self.token.type == "decl" and self.token.val == "let":
             self.move()
-            left_node = self.variable()
+            left_node = self.expression()  # Changed from postfix_expression to expression
+
+            if not self.is_valid_assignment_target(left_node):
+                raise Exception("Left operand of '=' must be a variable or dictionary index")
 
             if self.token and self.token.val == "=":
                 operation = self.token
@@ -161,39 +181,29 @@ class Parser:
             else:
                 raise Exception("Expected '=' after variable in declaration")
 
-        # Handle print statement
-        if self.token.val == "print":
+        # Print statement
+        if self.token and self.token.val == "print":
             return self.print_statement()
 
-        if self.token.type == "decl" and self.token.val == "print":
-            self.move()
-            expr = self.expression()
-            return ["print", expr]
-
-        # Handle assignment or fallback to expression
-        if self.token.type.startswith("var"):
-            start_index = self.index
-            left_node = self.token
+        # Try to parse as assignment or expression
+        left_node = self.expression()  # Changed from postfix_expression to expression
+        
+        # Check if this is an assignment
+        if self.token and self.token.val == "=":
+            if not self.is_valid_assignment_target(left_node):
+                raise Exception("Left operand of '=' must be a variable or indexable expression")
+                
+            operation = self.token
             self.move()
 
             if self.token and self.token.val == "=":
-                operation = self.token
-                self.move()
+                raise Exception("Chained assignments like 'a = b = 5' are not supported.")
 
-                if self.token and self.token.val == "=":
-                    raise Exception("Chained assignments like 'a = b = 5' are not supported.")
-
-                right_node = self.expression()
-                return [left_node, operation, right_node]
-            else:
-                # Not an assignment; backtrack and parse as expression
-                self.index = start_index
-                self.token = self.tokens[self.index]
-                return self.expression()
-
-        # Default: just an expression
-        return self.expression()
-
+            right_node = self.expression()
+            return [left_node, operation, right_node]
+        else:
+            # It's just an expression
+            return left_node
 
             
     def parse_statements(self):
@@ -201,10 +211,15 @@ class Parser:
         while self.token is not None:
             stmt = self.statement()
             statements.append(stmt)
+            
+            # Handle optional semicolon
             if self.token and self.token.val == ";":
                 self.move()  # consume semicolon
-            else:
+                
+            # Check if we're at the end or need to continue
+            if self.token is None:
                 break
+                
         return statements
 
     def parse(self):
@@ -344,5 +359,39 @@ class Parser:
                 break
 
         return node
+    
+    def parse_dict_literal(self):
+        if self.token.type != "brace" or self.token.val != "{":
+            raise Exception("Expected '{' to start dictionary literal")
+        
+        self.move()  # consume '{'
+        pairs = []
 
+        while self.token and not (self.token.type == "brace" and self.token.val == "}"):
+            # Treat unquoted variable keys as string literals
+            if self.token.type.startswith("var"):
+                key_token = self.token
+                key = ["str", key_token.val]  # Convert to string literal
+                self.move()
+            else:
+                key = self.expression()  # Fallback to full expression
 
+            if not (self.token and self.token.type == "colon"):
+                raise Exception("Expected ':' between key and value in dict")
+            self.move()  # consume ':'
+
+            value = self.expression()
+            pairs.append([key, value])
+
+            if self.token and self.token.type == "comma":
+                self.move()  # consume ',' and continue
+            elif self.token and self.token.type == "brace" and self.token.val == "}":
+                break
+            else:
+                raise Exception("Expected ',' or '}' in dict literal")
+
+        if self.token and self.token.type == "brace" and self.token.val == "}":
+            self.move()  # consume '}'
+            return ["dict_literal", pairs]
+        else:
+            raise Exception("Expected '}' at end of dictionary literal")

@@ -1,0 +1,4 @@
+print "hello" + " world";       # hello world
+print "test" == "test";         # true
+print "abc" != "def";           # true
+print "line\nbreak";            # line\nbreak (demonstrates escape sequence)

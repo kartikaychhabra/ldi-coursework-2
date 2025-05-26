@@ -1,0 +1,31 @@
+This file provides instructions to build and run the KayLang interpreter for the 6CC509 coursework submission.
+
+Prerequisites
+
+Ensure Python 3.8 or higher is installed on the Azure Labs VM. To check, run: python3 --version If not installed, install it using: sudo apt update sudo apt install python3
+
+Setup
+
+Ensure the following files are present in the directory:
+
+data.py
+interpreter.py
+lexer.py
+myparser.py
+shell.py
+tokens.py
+kaylang_example.kay
+
+No external dependencies are required; KayLang uses only Python's standard library.
+
+Running the Project
+
+1. Start the interactive REPL by running: python3 shell.py
+2. In the shell, type the commands like, "2+3", print("hello world"), and press Enter
+3. To run the example file demonstrating all features, go to folder- Examples, to run the files, run this command in shell - run "E:\LDI A2\Examples\stage6.txt" , change the file name as required.
+4. The example file will produce outputs for each stage, as described in README.txt
+
+NOTE
+
+1. Ensure all source files and kaylang_example.kay are in the project directory.
+2. The kaylang_example.kay file contains commented expected outputs for verification

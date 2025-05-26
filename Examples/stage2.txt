@@ -1,0 +1,5 @@
+print true == false;            # false
+print 5 < 10 and true;          # false
+print !(3 > 5);                 # true
+print (2 != 2) or false;        # false
+print true and not false;       # true
